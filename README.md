@@ -1,0 +1,4 @@
+python-autostereogram
+=====================
+
+Create autostereograms.
