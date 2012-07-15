@@ -24,7 +24,28 @@ def gen_random_dot_strip(width, height):
     return strip
 
 
-def gen_autostereogram(depth_map, levels=48):
+def gen_strip_from_tile(tile, width, height):
+    """
+    Given an open tile Image, return an Image of the specified width and height,
+    repeating tile as necessary to fill the image.
+
+    This strip will be repeated as the background for the autostereogram.
+    """
+    tile_pixels = tile.load()
+    tile_width, tile_height = tile.size
+
+    strip = Image.new("RGB", (width, height))
+    pix = strip.load()
+    for x in range(width):
+        for y in range(height):
+            x_offset = x % tile_width
+            y_offset = y % tile_height
+            pix[x,y] = tile_pixels[x_offset,y_offset]
+
+    return strip
+
+
+def gen_autostereogram(depth_map, levels=48, tile=None):
     """
     Given a depth map, return an autostereogram Image computed from that depth
     map.
@@ -39,7 +60,11 @@ def gen_autostereogram(depth_map, levels=48):
     # The depth map images is padded to the left and right by 1 strip width.
     image = Image.new("RGB", (depth_map_width + strip_width * 2, height))
 
-    background_strip = gen_random_dot_strip(strip_width, height)
+    if tile:
+        background_strip = gen_strip_from_tile(tile, strip_width, height)
+    else:
+        background_strip = gen_random_dot_strip(strip_width, height)
+
     strip_pixels = background_strip.load()
 
     depth_map = depth_map.convert('I')
@@ -73,10 +98,18 @@ if __name__ == "__main__":
                         help='The depth map from which to compute the autostereogram')
     parser.add_argument('outfile', metavar='OUTFILE', type=str, nargs='?',
                         help='The depth map from which to compute the autostereogram')
+    parser.add_argument('--tile', metavar='TILE', dest='tile', action='store',
+                        default=None,
+                        help='An image to tile as the background for the autostereogram')
 
     args = parser.parse_args()
 
-    autostereogram = gen_autostereogram(Image.open(args.depth_map))
+    if args.tile:
+        autostereogram = gen_autostereogram(Image.open(args.depth_map),
+                                            tile=Image.open(args.tile))
+    else:
+        autostereogram = gen_autostereogram(Image.open(args.depth_map))
+
     if args.outfile:
         autostereogram.save(args.outfile)
     else:
