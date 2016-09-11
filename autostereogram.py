@@ -45,20 +45,15 @@ def gen_strip_from_tile(tile, width, height):
     return strip
 
 
-def gen_autostereogram(depth_map, levels=48, tile=None):
+def gen_autostereogram(depth_map, num_strips=8, tile=None):
     """
     Given a depth map, return an autostereogram Image computed from that depth
     map.
     """
 
     depth_map_width, height = depth_map.size
-    # The minimum strip width must be greater than the maximum depth map offset,
-    # which is `levels`, or offsets may overlap.
-    num_strips = int(depth_map_width * .75 / levels)
     strip_width = depth_map_width // num_strips
-
-    # The depth map images is padded to the left and right by 1 strip width.
-    image = Image.new("RGB", (depth_map_width + strip_width * 2, height))
+    image = Image.new("RGB", (depth_map_width, height))
 
     if tile:
         background_strip = gen_strip_from_tile(tile, strip_width, height)
@@ -71,22 +66,14 @@ def gen_autostereogram(depth_map, levels=48, tile=None):
     depth_pixels = depth_map.load()
     image_pixels = image.load()
 
-    for y in range(height):
-        # Copy in one strip worth of background image, as left-padding for the
-        # depth map.
-        for x in range(strip_width):
-            image_pixels[x, y] = strip_pixels[x, y]
-
-        # Copy in the pixels for the depth map, offset horizontally by their depth.
-        for x in range(depth_map_width):
-            depth_offset = round(depth_pixels[x, y] * levels / 255.0)
-            offset = x + strip_width
-            image_pixels[offset, y] = image_pixels[x + depth_offset, y]
-
-        # Fill in one strip to the right of the depth map as right-padding.
-        for x in range(strip_width):
-            offset = depth_map_width + strip_width + x
-            image_pixels[offset, y] = image_pixels[offset - strip_width, y]
+    for x in xrange(depth_map_width):
+        for y in xrange(height):
+            # Need one full strip's worth to borrow from.
+            if x < strip_width:
+                image_pixels[x, y] = strip_pixels[x, y]
+            else:
+                depth_offset = depth_pixels[x, y] / num_strips
+                image_pixels[x, y] = image_pixels[x - strip_width + depth_offset, y]
 
     return image
 
