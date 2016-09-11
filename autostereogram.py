@@ -45,14 +45,22 @@ def gen_strip_from_tile(tile, width, height):
     return strip
 
 
-def gen_autostereogram(depth_map, num_strips=8, tile=None):
+def gen_autostereogram(depth_map, tile=None):
     """
     Given a depth map, return an autostereogram Image computed from that depth
     map.
     """
-
     depth_map_width, height = depth_map.size
-    strip_width = depth_map_width // num_strips
+
+    # If we have a tile, we want the strip width to be a multiple of the tile
+    # width so it repeats cleanly.
+    if tile:
+        tile_width = tile.size[0]
+        strip_width = tile_width
+    else:
+        strip_width = depth_map_width / 8
+
+    num_strips = depth_map_width / strip_width
     image = Image.new("RGB", (depth_map_width, height))
 
     if tile:
